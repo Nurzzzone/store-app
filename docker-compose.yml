@@ -1,0 +1,49 @@
+version: '3'
+
+services:
+    mysql:
+        image: mysql:8.2.0
+        restart: unless-stopped
+        environment:
+            - MYSQL_DATABASE=${DB_DATABASE}
+            - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+        ports:
+            - "3306:3306"
+        networks:
+            - store-app-network
+
+    composer:
+        image: composer:2.8.3
+        working_dir: /app
+        networks:
+            - store-app-network
+        volumes:
+            - .:/app
+        entrypoint: composer
+        command: ['install']
+
+    app:
+        image: php:8.2.26
+        build:
+            context: .
+            dockerfile: ./Dockerfile
+        restart: always
+        working_dir: /app
+        volumes:
+            - ./:/app
+        ports:
+            - "80:80"
+        networks:
+            - store-app-network
+        depends_on:
+            - composer
+        entrypoint: php artisan serve --host=0.0.0.0 --port=80
+
+    redis:
+        image: redis:7.2
+        networks:
+            - store-app-network
+
+networks:
+    store-app-network:
+        driver: bridge
